@@ -1,0 +1,15 @@
+# Coding Instructor
+
+lessons/
+CURRICULUM.md
+LOCK
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
