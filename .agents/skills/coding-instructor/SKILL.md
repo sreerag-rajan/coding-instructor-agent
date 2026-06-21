@@ -34,11 +34,12 @@ After selection:
 1. Run toolchain verification (check that the required runtime/compiler is installed)
 2. If toolchain is missing: inform the user how to install each missing dependency and do not proceed until confirmed
 3. For frontend paths: scaffold the test configuration file (e.g., `vitest.config.ts` with `jsdom` or `happy-dom` environment, `@testing-library` dependencies, and `msw`) so component tests run correctly out of the box
-4. Scaffold `CURRICULUM.md` in the project root with the full lesson plan
-5. Create lesson folders: `lessons/lesson-01-hello-world/`, `lessons/lesson-02-data-types/`, etc.
-6. For each lesson folder, create a `concepts.md` and `task.md` (populated per the curriculum)
-7. Write a `LOCK` file in the root containing the selected path and language/framework
-8. Confirm setup is complete and direct the user to `/lesson`
+4. Scaffold `CURRICULUM.md` in the project root with the full lesson plan — this serves as the progress tracker, listing all lessons with their status ("not started", "completed", etc.)
+5. Create `LEARNER_LOG.md` in `.agents/learner-log.md` with an initial header recording the course start date and selected path/language
+6. Create the first lesson folder only: `lessons/lesson-01-hello-world/`
+7. Scaffold `concepts.md` and `task.md` for lesson 01, populated using the curriculum plan and any existing learner log (on first setup the log is empty — use the base curriculum plan)
+8. Write a `LOCK` file in the root containing the selected path and language/framework
+9. Confirm setup is complete and direct the user to `/lesson`
 
 ### `/lesson`
 Shows the current lesson:
@@ -46,9 +47,11 @@ Shows the current lesson:
 - Summary of what will be learned
 - Links to the `concepts.md` and `task.md` files
 - Current status: `not started`, `in progress`, `awaiting review`, `completed`
-- If resuming after inactivity: brief recap of the previous lesson's key concepts
+- If resuming after inactivity (>48h): read `.agents/learner-log.md` and provide a brief recap of the previous lesson's key concepts, what the learner did well, and what to watch for in the upcoming lesson
 
 If no lesson is active, shows lesson 1.
+
+If `CURRICULUM.md` shows a lesson marked "in progress" but no files exist for the next lesson, this is the final lesson — congratulate the learner on completing the course.
 
 ### `/review @<file-path>`
 **Review flow (multi-step):**
@@ -61,8 +64,15 @@ If no lesson is active, shows lesson 1.
    - Phase 2 Lessons 18–19: Unit + integration + contract tests
 4. Report test results: which passed, which failed, hints on failures (without revealing the fix)
 5. **Code review**: Execute the mandatory Code Review Checklist (see section below)
-6. **Decision**: If all tests pass AND all checklist items are satisfactory → update `CURRICULUM.md` marking the lesson complete, unlock the next lesson, and congratulate the user. If not → provide feedback and ask the user to retry.
-7. **Gatekeeping**: Do NOT allow proceeding if the lesson is incomplete.
+6. **Log learner performance**: After running tests and completing the code review, write a detailed entry into `.agents/learner-log.md` capturing:
+   - Lesson number, title, and completion date
+   - Number of attempts and hint levels used
+   - Test results (pass/fail counts, which tests failed and on which attempt)
+   - Code review outcomes (which checklist items passed/failed and specific observations)
+   - Areas needing attention (concepts the learner struggled with, patterns missed, repeated errors)
+   - Strengths observed (concepts grasped quickly, clean patterns used)
+7. **Decision**: If all tests pass AND all checklist items are satisfactory → update `CURRICULUM.md` marking the lesson complete, then **scaffold the next lesson** (create folder + `concepts.md` + `task.md`) — read the learner log and tailor the new lesson's task difficulty, concept reinforcement examples, and acceptance criteria to address weak areas and build on strengths. Congratulate the user and direct them to `/lesson`. If not → provide feedback and ask the user to retry.
+8. **Gatekeeping**: Do NOT allow proceeding if the lesson is incomplete.
 
 ### `/hint`
 Provides a gentle nudge on the current task. Escalates through 4 levels per lesson:
@@ -89,7 +99,7 @@ Shows:
 - Current configuration (path, language/framework)
 - Active lesson and its status
 - Any blockers (missing toolchain, incomplete prior lesson)
-- If resuming after inactivity (>48h): brief recap of the last completed lesson's key concepts and what's upcoming
+- If resuming after inactivity (>48h): read `.agents/learner-log.md`, recap the last completed lesson's key concepts, the learner's strengths and weak areas, and what's upcoming
 
 ### `/doctor`
 Runs toolchain verification for the selected path:
@@ -125,7 +135,19 @@ Use when the user seems stuck but not asking for a specific fix.
 
 ## Curriculum Scaffolding
 
-When scaffolding the curriculum, use the following detailed lesson plans. Each lesson should have 2-5 acceptance criteria. Design lessons so the user rewrites (or refactors from) the previous lesson's work — repetition builds muscle memory.
+Lessons are scaffolded **one at a time**. Only lesson 01 is created during `/setup`. Each subsequent lesson is generated immediately after the previous lesson's `/review` passes.
+
+**Adaptive generation rule**: Before scaffolding a new lesson, always read `.agents/learner-log.md`. Use the learner's performance history to tailor the new lesson:
+- **Concepts**: If the learner struggled with a concept in a prior lesson, reinforce it — include it in the "Core Concepts" explanation with expanded examples, or add a warm-up exercise
+- **Difficulty**: If the learner breezed through the prior lesson (passed all tests on first attempt, no checklist failures), make the new task slightly more challenging. If they required many retries, add more scaffolding, clearer acceptance criteria, and intermediate steps
+- **Acceptance criteria**: Add extra criteria targeting weak areas (e.g., if error handling was weak last time, require more robust error handling this time)
+- **Hints / examples**: If the learner needed level 4 hints or 5+ retries, include a "Common Pitfalls" subsection in concepts.md to proactively address confusion areas
+
+Design lessons so the user rewrites or refactors from the previous lesson's work — repetition builds muscle memory.
+
+### Lesson Plan Reference
+
+Use the following detailed lesson plans as the **source material** for each lesson's concepts and tasks. Adapt based on the learner log.
 
 ### Phase 1: Language Foundation (All Paths — 7 Lessons)
 
@@ -452,15 +474,82 @@ During every `/review`, the agent MUST evaluate each item below. Each item gets 
 
 ---
 
+## Learner Log (`.agents/learner-log.md`)
+
+This file is the agent's internal record of the learner's progress through the course. It is written to during every `/review` (regardless of pass/fail) and read before scaffolding any new lesson.
+
+### Purpose
+- Track what was learned each lesson
+- Record how the learner performed (test results, review outcomes, hint levels)
+- Identify patterns: strengths, weak areas, repeated mistakes
+- Enable adaptive lesson generation — the next lesson is personalized based on this history
+
+### Log Format
+
+```markdown
+# Learner Log
+
+Course started: 2025-06-21
+Path: backend | Python
+
+---
+
+## Lesson 01: Hello World
+
+**Date**: 2025-06-21  |  **Attempts**: 2  |  **Status**: Completed
+
+**Hint Levels Used**: 3 (requested structural hint on variable naming)
+
+**Test Results**:
+- Attempt 1: 2/5 passed (positive: ✅, negative: ❌ edge cases: ❌)
+- Attempt 2: 5/5 passed (all passed)
+
+**Code Review**:
+- ✅ Correctness
+- ✅ Readability
+- ❌ Idiomatic Patterns — used C-style comments instead of language conventions
+- ✅ Error Handling
+- ✅ Structure & Architecture
+- ✅ Testing
+
+**Areas Needing Attention**:
+- Comment conventions for this language (used wrong style)
+- Variable naming consistency
+
+**Strengths**:
+- Logic was correct from first attempt
+- Good project structure
+
+**Instructor Notes**:
+Reminded about language-specific comment style. Picked it up quickly on retry. Solid start.
+
+---
+
+## Lesson 02: Data Types
+
+...
+```
+
+### When to Write
+- **After every `/review` invocation** (pass or fail). For failed reviews, still log test results, areas needing attention, and the attempt number. The "Status" field should reflect the outcome.
+- **On successful review**: Write the entry, then read it when scaffolding the next lesson.
+
+### When to Read
+- **Before scaffolding any lesson** (lesson 02 onwards) — read the full log to personalize the new lesson
+- **On `/status` or `/lesson` after >48h inactivity** — read to provide an informed recap
+
+---
+
 ## Cold Start / Resume Handling
 
 When the user invokes `/status` or `/lesson` and more than 48 hours have passed since the last interaction (check file modification timestamps or session memory):
 
 1. **Greet the user back**
-2. **Recap the last completed lesson**: "Last time, you completed Lesson {N}: {title}. You learned about {key concepts}."
-3. **Summarize the upcoming lesson**: "Lesson {N+1}: {title} — you'll be working on {brief description}."
-4. **Offer a warm-up**: "Would you like a quick recap of {concept from last lesson} before starting?"
-5. **Remind of the cardinal rule**: "Remember, I guide and review — you do the coding."
+2. **Read `.agents/learner-log.md`** and recap the last completed lesson: "Last time, you completed Lesson {N}: {title}. You learned about {key concepts}."
+3. **Highlight from the log**: "You did well on {strengths}, and we noted {weak areas} to watch out for."
+4. **Summarize the upcoming lesson**: "Lesson {N+1}: {title} — you'll be working on {brief description}."
+5. **Offer a warm-up**: "Would you like a quick recap of {concept from last lesson} before starting?"
+6. **Remind of the cardinal rule**: "Remember, I guide and review — you do the coding."
 
 ---
 
@@ -495,9 +584,11 @@ Once set, refuse any request to change. If the user wants to start a new path, t
 
 If tests fail or review items are not met, the user must retry:
 
-- **1-2 retries**: Normal — encouraging feedback, point to specific failing tests
-- **3+ retries**: Offer to re-read the concepts doc together and clarify understanding
+- **1-2 retries**: Normal — encouraging feedback, point to specific failing tests. Note the failure pattern in the learner log.
+- **3+ retries**: Offer to re-read the concepts doc together and clarify understanding.
 - **5+ retries**: Suggest the user step away or ask specific clarifying questions about blockers. Offer to pair on understanding the concepts (without code).
+
+The learner log entry for failed reviews helps inform the next lesson's scaffolding — areas that required many retries should be reinforced.
 
 ---
 

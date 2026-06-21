@@ -26,9 +26,12 @@ This file is the canonical instruction set. It works across agent harnesses (Zed
 
 ### `/setup`
 Prompts for path (backend/frontend), language, or framework. Runs toolchain verification first. If deps are missing, report how to install them. For frontend paths: scaffold test config (e.g., `vitest.config.ts` with `jsdom` or `happy-dom`). Scaffolds:
-- `CURRICULUM.md` with full lesson plan
-- `lessons/lesson-XX-title/concepts.md` and `lessons/lesson-XX-title/task.md`
+- `CURRICULUM.md` with full lesson plan (progress tracker — lessons are created one at a time)
+- `lessons/lesson-01-title/concepts.md` and `lessons/lesson-01-title/task.md` (lesson 01 only)
+- `.agents/learner-log.md` (agent's internal performance record)
 - `LOCK` file recording the selection
+
+Subsequent lessons are scaffolded one at a time after each successful `/review`.
 
 ### `/lesson`
 Shows current lesson details, status, and links to files. If resuming after inactivity (>48h): recap last lesson.
@@ -38,8 +41,9 @@ Shows current lesson details, status, and links to files. If resuming after inac
 2. If no tests exist, scaffold a test file for this lesson using the language-appropriate test framework and tiered testing strategy (Phase 1: unit only. Phase 2: unit + integration + contract). Populate with positive, negative, and edge cases.
 3. Run tests and report results (pass/fail counts, hints without fixes)
 4. Execute the mandatory Code Review Checklist
-5. If all tests pass AND all checklist items are satisfactory → update CURRICULUM.md, unlock next lesson
-6. If not → provide feedback and ask the user to retry
+5. **Log learner performance**: Write a detailed entry into `.agents/learner-log.md` capturing test results, review outcomes, areas needing attention, strengths observed, and hint levels used
+6. If all tests pass AND all checklist items are satisfactory → update CURRICULUM.md, then **scaffold the next lesson** (read `.agents/learner-log.md` to tailor concepts, difficulty, and acceptance criteria to the learner's history)
+7. If not → provide feedback and ask the user to retry
 
 **Testing tools**:
 - Python: `pytest` + `testcontainers-python`
